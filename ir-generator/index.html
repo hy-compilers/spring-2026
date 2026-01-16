@@ -286,11 +286,14 @@ Here’s an example of some of our IR instructions, corresponding to the express
 </span><span class="nc">Call</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="p">[</span><span class="n">x2</span><span class="p">],</span> <span class="n">x3</span><span class="p">)</span>
 </code></pre></div></div>
 
+<p>Each IR instruction is ”simple” in the sense that its parameters are
+either constants or variables, not any kind of subexpressions.</p>
+
 <p>An IR can be designed to be more high-level i.e. more abstract,
 or more low-level i.e. closer to machine code.
 Our IR is quite <span data-aside="ir-levels">high-level</span>.</p>
 
-<p>For instance, we assume an infinite set of abstract variables
+<p>For instance, we assume an infinite set of variables
 (<code class="language-plaintext highlighter-rouge">a</code>, <code class="language-plaintext highlighter-rouge">x1</code>, …). We leave it to the Assembly generator
 to map each variable to a concrete memory location or register.</p>
 
@@ -300,9 +303,8 @@ some <code class="language-plaintext highlighter-rouge">Call</code>s into machin
 and others into function call code.</p>
 
 <aside id="ir-levels">
-  <p>Real-world compilers sometimes employ two or more different IRs:
-some are more abstract and high-level like ours
-while others are closer to machine code.
+  <p>Real-world compilers sometimes have two or more different IRs in the same compiler:
+some are more abstract and high-level like ours while others are closer to machine code.
 Generally, high-level IRs are easier to analyze and transform
 while lower-level IRs are easier to translate to different types of machines
 and operating systems, and to perform machine-specific optimizations on.</p>
@@ -316,7 +318,7 @@ on IR code rather than concrete machine code.</p>
 
 <h2 id="variables-and-instructions">Variables and instructions</h2>
 
-<p>IR instructions operate on abstract <strong>IR variables</strong>
+<p>Our IR instructions operate on abstract <strong>IR variables</strong>
 (sometimes called ”abstract registers” or ”symbols”).</p>
 
 <p>An IR variable can denote the following kinds of things:</p>
@@ -333,10 +335,10 @@ on IR code rather than concrete machine code.</p>
   <li>The IR variable to store the return value in (<code class="language-plaintext highlighter-rouge">y</code>)</li>
 </ul>
 
-<p>Unlike the variables in our language, IR variables don’t have scopes.
-We can use the variable names in our language as IR variable names as long as
-they don’t clash. If the input code contains e.g. <code class="language-plaintext highlighter-rouge">var print_int = ...</code>,
-we will map that variable to a different IR variable,
+<p>Unlike the variables in our source language, IR variables don’t have scopes.
+This means we must make sure IR variables don’t accidentally clash.
+If the input code contains e.g. <code class="language-plaintext highlighter-rouge">var print_int = ...</code>,
+we have to map that variable to a different IR variable,
 such as <code class="language-plaintext highlighter-rouge">print_int2</code>. The same goes for shadowing variables.</p>
 
 <p>Later when we translate IR code to Assembly code, IR variables will
@@ -350,14 +352,15 @@ This limitation doesn’t matter for now, since all values in our language
     <li><code class="language-plaintext highlighter-rouge">Int</code> is an 8-byte integer between (-2<sup>63</sup> and 2<sup>63</sup>-1)</li>
     <li>A function is represented as 8-byte memory addresses of the function’s code.</li>
     <li><code class="language-plaintext highlighter-rouge">Unit</code> can be any value.
-(We could say it has to be 0, but we won’t ever read the value of <code class="language-plaintext highlighter-rouge">unit</code>,
-and we technically don’t even need to assign a storage location to it.)</li>
+(We could say it has to be 0, but a program passing the type checker
+won’t ever read the value of <code class="language-plaintext highlighter-rouge">unit</code>, and we technically don’t even need to
+assign a storage location to it.)</li>
   </ul>
 </aside>
 
 <p class="note-title">Exercise (optional)</p>
 
-<p class="note">Write IR code for the expressions <code class="language-plaintext highlighter-rouge">a * b</code>, <code class="language-plaintext highlighter-rouge">f(g(x + 1))</code> and <code class="language-plaintext highlighter-rouge">{ f(x); f(y); }</code>.</p>
+<p class="note">Manually write IR code for the expressions <code class="language-plaintext highlighter-rouge">a * b</code>, <code class="language-plaintext highlighter-rouge">f(g(x + 1))</code> and <code class="language-plaintext highlighter-rouge">{ f(x); f(y); }</code>.</p>
 
 <h2 id="labels-and-jumps">Labels and jumps</h2>
 
@@ -505,9 +508,21 @@ Most of these you’ve already seen in examples.</p>
 <h2 id="generating-ir">Generating IR</h2>
 
 <p>Just like the interpreter and type checker,
-an IR generator works by recursing over the AST with a symbol table.
-At each AST node, the IR generator emits one or more IR instructions
-and generates IR variables as needed to store intermediate results.</p>
+an IR generator works by recursing over the AST with a symbol table.</p>
+
+<p>At each AST node, we need to:</p>
+<ol>
+  <li>emit the IR instructions that compute what the AST node expresses,</li>
+  <li>return the IR variable that holds the result of the computation.</li>
+</ol>
+
+<p>We can create new temporary IR variables as needed.</p>
+
+<p>Example: for a <code class="language-plaintext highlighter-rouge">BinaryOp</code> node that does addition, we’d first recursively emit instructions
+to compute the left and right side of the <code class="language-plaintext highlighter-rouge">+</code>. The recursive calls would return to us the IR variables that
+will hold those results – let’s call them <code class="language-plaintext highlighter-rouge">left</code> and <code class="language-plaintext highlighter-rouge">right</code>.
+Finally, we’d create a new variable for the final result <code class="language-plaintext highlighter-rouge">result</code> and emit a <code class="language-plaintext highlighter-rouge">Call(+, [left, right], result)</code> instruction,
+and return the IR variable <code class="language-plaintext highlighter-rouge">result</code>.</p>
 
 <p>Below is partial code for the IR generator.
 Each ”<code class="language-plaintext highlighter-rouge">...</code>” means you get to fill in that part.</p>
@@ -578,11 +593,12 @@ Each ”<code class="language-plaintext highlighter-rouge">...</code>” means y
 
             <span class="p">...</span> <span class="c1"># Other AST node cases (see below)
 </span>
-    <span class="c1"># Create a SymTab that maps all available global names
-</span>    <span class="c1"># to IR variables of the same name.
+    <span class="c1"># We start with a SymTab that maps all available global names
+</span>    <span class="c1"># like 'print_int' to IR variables of the same name.
 </span>    <span class="c1"># In the Assembly generator stage, we will give
-</span>    <span class="c1"># definitions for these globals. For now,
-</span>    <span class="c1"># they just need to exist so the variable lookups work.
+</span>    <span class="c1"># actual implementations for these globals. For now,
+</span>    <span class="c1"># they just need to exist so the variable lookups work,
+</span>    <span class="c1"># and clashing variable names can be avoided.
 </span>    <span class="n">root_symtab</span> <span class="o">=</span> <span class="n">SymTab</span><span class="p">[</span><span class="n">IRVar</span><span class="p">](</span><span class="n">parent</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">reserved_names</span><span class="p">:</span>
         <span class="n">root_symtab</span><span class="p">.</span><span class="nf">add_local</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nc">IRVar</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
@@ -590,7 +606,8 @@ Each ”<code class="language-plaintext highlighter-rouge">...</code>” means y
     <span class="c1"># Start visiting the AST from the root.
 </span>    <span class="n">var_final_result</span> <span class="o">=</span> <span class="nf">visit</span><span class="p">(</span><span class="n">root_symtab</span><span class="p">,</span> <span class="n">root_expr</span><span class="p">)</span>
 
-    <span class="c1"># The type is available on the AST node after type checking.
+    <span class="c1"># Add IR code to print the result, based on the type assigned earlier
+</span>    <span class="c1"># by the type checker.
 </span>    <span class="k">if</span> <span class="n">root_expr</span><span class="p">.</span><span class="nb">type</span> <span class="o">==</span> <span class="n">Int</span><span class="p">:</span>
         <span class="p">...</span> <span class="c1"># Emit a call to 'print_int'
 </span>    <span class="k">elif</span> <span class="n">root_expr</span><span class="p">.</span><span class="nb">type</span> <span class="o">==</span> <span class="n">Bool</span><span class="p">:</span>
