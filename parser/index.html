@@ -481,7 +481,7 @@ Let’s keep track of our position in the token list in variable <code class="la
 
 <p>We’ll build our parser out of <strong>parsing functions</strong>, one for each kind of AST node.</p>
 
-<p>If the input is valid, a parsing function moves <code class="language-plaintext highlighter-rouge">pos</code> forward and returns a valid AST node.</p>
+<p>If the input at <code class="language-plaintext highlighter-rouge">pos</code> is valid, a parsing function moves <code class="language-plaintext highlighter-rouge">pos</code> forward and returns a valid AST node.</p>
 
 <p>More precisely: a parsing function for an AST node type <code class="language-plaintext highlighter-rouge">T</code> (e.g. a <code class="language-plaintext highlighter-rouge">BinaryOp</code> node),
 is a function that checks whether there is valid syntax for <code class="language-plaintext highlighter-rouge">T</code> at <code class="language-plaintext highlighter-rouge">pos</code>.</p>
@@ -535,10 +535,11 @@ then requires a <code class="language-plaintext highlighter-rouge">+</code> or <
 </code></pre></div></div>
 
 <p>This simple parser works for <code class="language-plaintext highlighter-rouge">2 + 2</code> and <code class="language-plaintext highlighter-rouge">55 + 7</code> etc,
-but it doesn’t yet support identifiers (e.g. <code class="language-plaintext highlighter-rouge">a + 3</code>) nor
-more than one operation (e.g. <code class="language-plaintext highlighter-rouge">1 - 2 + 3</code>). Next we’ll address these
-deficiencies as we introduce the main techniques and concerns for writing
-parsing functions.</p>
+but it doesn’t yet support identifiers (e.g. <code class="language-plaintext highlighter-rouge">a + 3</code>),
+nor more than one operation (e.g. <code class="language-plaintext highlighter-rouge">1 - 2 + 3</code>),
+nor lone literals (e.g. just <code class="language-plaintext highlighter-rouge">3</code>).
+We’ll address these shortcomings next as we introduce the main techniques
+for writing parsing functions.</p>
 
 <p>Before reading on, it’s a good idea to stop and internalize this example,
 and the general specification for parsing functions. That will be useful
@@ -657,7 +658,7 @@ Building up a list of terms and then processing that is another.</p>
 That is, we’d like <code class="language-plaintext highlighter-rouge">*</code> and <code class="language-plaintext highlighter-rouge">/</code> to have <strong>higher precedence</strong>
 than <code class="language-plaintext highlighter-rouge">+</code> and <code class="language-plaintext highlighter-rouge">-</code>.</p>
 
-<p>Note that this does not contradict associativity.
+<p>Note that precedence is entirely separate from associativity.
 Associativity only determines how operators on the <em>same</em> precedence level
 are grouped.</p>
 
