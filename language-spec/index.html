@@ -295,8 +295,12 @@ where <code class="language-plaintext highlighter-rouge">E</code>, <code class="
   <li>Untyped variable declaration: <code class="language-plaintext highlighter-rouge">var ID = E</code> where <code class="language-plaintext highlighter-rouge">ID</code> is an identifier.</li>
   <li>Typed variable declaration: <code class="language-plaintext highlighter-rouge">var ID: T = E</code> where <code class="language-plaintext highlighter-rouge">ID</code> is an identifier and
 <code class="language-plaintext highlighter-rouge">T</code> is <code class="language-plaintext highlighter-rouge">Int</code>, <code class="language-plaintext highlighter-rouge">Bool</code> or <code class="language-plaintext highlighter-rouge">Unit</code>.</li>
-  <li>If-then conditional: <code class="language-plaintext highlighter-rouge">if E1 then E2</code></li>
-  <li>If-then-else conditional: <code class="language-plaintext highlighter-rouge">if E1 then E2 else E3</code></li>
+  <li>Conditional: <code class="language-plaintext highlighter-rouge">if E1 then E2</code> or <code class="language-plaintext highlighter-rouge">if E1 then E2 else E3</code>
+    <ul>
+      <li>Nested conditionals take <code class="language-plaintext highlighter-rouge">E2</code> to be as long as possible, meaning
+<code class="language-plaintext highlighter-rouge">if a then if b then c else d</code> is parsed as <code class="language-plaintext highlighter-rouge">if a then (if b then c else d)</code>.</li>
+    </ul>
+  </li>
   <li>While-loop: <code class="language-plaintext highlighter-rouge">while E1 do E2</code></li>
   <li>Function call: <code class="language-plaintext highlighter-rouge">ID(E1, E2, ..., En)</code> where <code class="language-plaintext highlighter-rouge">ID</code> is an identifier</li>
 </ul>
